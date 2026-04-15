@@ -1,0 +1,17 @@
+类别映射关系字典:
+  ID: 0 <--> Gesture_Open
+  ID: 1 <--> Gesture_Fist
+  ID: 2 <--> Single_Thumb
+  ID: 3 <--> Extent_Half
+  ID: 4 <--> Power_Cylinder
+  ID: 5 <--> Gesture_Social
+  ID: 6 <--> Single_Index
+  ID: 7 <--> Extent_Slight
+  ID: 8 <--> Precision_Pinch_2
+  ID: 9 <--> Precision_Pinch_3
+  ID: 10 <--> Single_Middle
+  ID: 11 <--> Precision_Lateral
+  ID: 12 <--> Power_Sphere
+  ID: 13 <--> Single_Ring
+  ID: 14 <--> Single_Pinky
+💡 提示：请确保你 config.py 中的 NUM_CATEGORIES 被设置为 15

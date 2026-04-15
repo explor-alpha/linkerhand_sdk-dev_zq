@@ -1,77 +1,52 @@
-#### Install SDK
 
-> 官方SDK（linkerhand-python-sdk-main）下载：[linker-bot/linkerhand-python-sdk: Linkerhand Python SDK](https://github.com/linker-bot/linkerhand-python-sdk) 
+## 环境配置：
+
+### Install SDK
+
+> 官方SDK 下载：[Linkerhand Python SDK](https://github.com/linker-bot/linkerhand-python-sdk) 
 > **注意是：release_3.0.2（本项目灵巧手硬件是RS485，只能配置modbus；不能can！新版似乎有不兼容问题）**
 
 ```bash
-git clone ...
-cd linkerhand-python-sdk/
-conda create -n .. python=3.10
-conda activate ...
+conda create -n linkerhand python=3.10 -y
+conda activate linkerhand
+
+cd sdk
 pip install -r requirements.txt
 ```
 
-- 修改config
+> 修改sdk-config：MODBUS接口
 
-## My project——QunZheng_Linker
+### Install 本项目依赖
 
-#### 配置：
-
-- Windows11
-- SDK：release_3.0.2
-- Python=3.10
-- Windows + RTX 5060Ti (sm_120)
-- CUDA 12.8 | torch 2.7.0
-
-```bash
-cd ...
-conda activate ...
+#### Mac M5
+```zsh
+cd ..
+pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0
+pip install -r requirements.txt
 ```
 
+#### Win11 + RTX 50系列 (sm_120)
 ```
-# Windows + RTX 5060Ti (sm_120)
-# CUDA 12.8 | torch 2.7.0
+cd ..
 pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu128
-```
-
-```
-# Windows + cpu for demo
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-```
-
-```bash
 pip install -r requirements.txt
 ```
 
-```python
-# 测试
-import torch
-print("PyTorch 版本:", torch.__version__)
-print("内置 CUDA:", torch.version.cuda)
-print("GPU 是否可用:", torch.cuda.is_available())
-print("显卡名称:", torch.cuda.get_device_name(0))
-print("计算能力:", torch.cuda.get_device_capability(0))
-```
-
-### v1.1.1 项目文件结构：
-
-PS：本项目配置在windows系统：
+## 项目说明
 
 ```
-cd C:\Users\QunZ\projects_win\own\linkerhand-python-sdk-main\
+linkerhand_sdk-dev_zq/         
+├── sdk/                             <--（SDK_ROOT_DIR）
+│   └──LinkerHand                    <-- 官方 SDK 包 (包含 api, utils 等)
+│
+└── linker_zq/
+    ├── 01_action_head               <-- my project1
+    └── TODO
 ```
 
+### Project 文件结构：01_action_head 
 ```
-## v1(v1.1.1)
-linkerhand-python-sdk-main/         <-- SDK_ROOT_DIR
-├── LinkerHand/                     <-- 官方 SDK 包 (包含 api, utils 等)
-├── ...
-└── QunZheng_Linker/
-    ├── QunZheng_backups/           <-- My关键版本备份
-    │		├── release/                    # 版本说明
-    │		└── ...
-    │	
-    └── Policy_Network/            <-- My当前项目主目录 (BASE_DIR)
+        01_action_head/              <-- my project1主目录 (BASE_DIR)
 		├── data/                       # 存放所有数据 (严禁将数据随代码一起传到Git)
 		│   ├── backups/                # 1. 原始数据: 所有数据集
 		│   ├── raw/initial_data.csv    # 2. 工作台；仅放入无增强数据进行数据增强
@@ -102,7 +77,7 @@ linkerhand-python-sdk-main/         <-- SDK_ROOT_DIR
 		└── README.md                   # 项目说明文档
 ```
 
-### Workflow
+### Workflow：01_action_head Workflow
 
 **Step01. 数据增强&调整config.py**
 
@@ -120,7 +95,7 @@ linkerhand-python-sdk-main/         <-- SDK_ROOT_DIR
 
 **运行：**
 ```
-python QunZheng_Linker\Policy_Network\scripts\01_data_augment.py
+python linker_zq/01_action_head/scripts/01_data_augment.py
 ```
 
 **运行后：**
@@ -140,10 +115,10 @@ python QunZheng_Linker\Policy_Network\scripts\01_data_augment.py
 - 确认权重文件无误（没有 or 训练到一半）
 
 - train
-```bash
+```zsh
 # 设置环境变量：huggingface镜像：
 set HF_ENDPOINT=https://hf-mirror.com
-python QunZheng_Linker\Policy_Network\scripts\02_train.py
+python linker_zq/01_action_head/scripts/02_train.py
 ```
 - 支持断点续训，ctrl+c暂停。
 
@@ -155,11 +130,11 @@ Step03：TensorBoard & run
 	- **==尤其是Category,current_joints相关参数==**
 	- **==“训练动态超参数”**==
 
-- TensorBoard
-```
-tensorboard --logdir=QunZheng_Linker\Policy_Network\runs\
+
+```zsh
+tensorboard --logdir=linker_zq/01_action_head/runs/
 ```
 
-```
-python QunZheng_Linker\Policy_Network\scripts\03_run_robot.py
+```zsh
+python linker_zq/01_action_head/scripts/03_run_robot.py
 ```

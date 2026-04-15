@@ -1,17 +1,13 @@
-# Windows + RTX 5060Ti (sm_120)
-# CUDA 12.8 | torch 2.7.0
-# pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https://download.pytorch.org/whl/cu128
-
-# Windows + cpu for demo
-# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+# requirements.txt for linker_zq
 
 pandas>=2.0.0
 pyyaml>=6.0
 pyserial>=3.5
 tensorboard
+setuptools==69.5.1
 
+# -----Project: 01_action_head-----
 # 数据增强llm api
 openai
 # 预训练 embedding
 sentence-transformers>=2.5.0
-

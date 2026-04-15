@@ -31,5 +31,5 @@ def set_torque(val):
 # 使用示例
 set_speed(50)      # 所有关节速度
 set_torque(25)      # 所有关节扭矩
-move_hand([255, 255, 255, 255, 255, 255])
+move_hand([0, 255, 255, 255, 255, 255])
 #print(read_touch_matrix())

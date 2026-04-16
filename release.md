@@ -20,13 +20,13 @@
 	- 支持：断点续训 (Resume Training)  
 
 🛠 Fixed：  
-	- 统一所有硬件初始化操作：设置 250/255 状态为默认初始化状态  
+- 统一所有硬件初始化操作：设置 250/255 状态为默认初始化状态  
 
 ⚙️ Changed：   
-	- debug in “model01：Embedding+MLP“：  
-		- 添加测试集&验证集  
-		- Key-debug：train 中 total_loss += loss.item() * len(batch_target)  
-		- debug：model 中 nn.Dropout(max(0, dropout - 0.1))  
+- debug in “model01：Embedding+MLP“：  
+	- 添加测试集&验证集  
+	- Key-debug：train 中 total_loss += loss.item() * len(batch_target)  
+	- debug：model 中 nn.Dropout(max(0, dropout - 0.1))  
 
 Project 文件结构：01_action_head 
 ```
@@ -60,3 +60,10 @@ Project 文件结构：01_action_head
 		├── requirements.txt            # 依赖包列表
 		└── README.md                   # 项目说明文档
 ```
+
+TODO:  
+- TODO-优化布局：支持多"算法骨架"的对比分析
+- TODO-优化布局：更加分布式，添加并剥离评估体系
+- TODO-优化布局：更加分布式，添加并剥离data体系
+- TODO-优化布局：更加分布式，添加并剥离loss function配置
+- **model_2_Cross-modal-Alignment**

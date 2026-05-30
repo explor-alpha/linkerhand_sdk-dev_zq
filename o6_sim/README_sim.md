@@ -9,11 +9,11 @@
 <table style="width: 100%; border-collapse: collapse; border: none;">
   <tr style="border: none;">
     <td width="33.3%" align="center" style="border: none;">
-      <img src="show_results/show_scene1.gif" width="100%">
+      <img src="./show_results/show_scene1.gif" width="100%">
       <br><sub>Isaac Sim：场景建模</sub>
     </td>
     <td width="33.3%" align="center" style="border: none;">
-      <img src="show_results/test_mimic.gif" width="100%">
+      <img src="./show_results/test_mimic.gif" width="100%">
       <br><sub>Isaac sim：Debug-mimic联动关节调试</sub>
     </td>
     <td width="33.3%" align="center" style="border: none;">

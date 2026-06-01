@@ -30,3 +30,6 @@ Thumbs.db
 
 # 锁定 .gitattributes 不被忽略
 !.gitattributes
+
+# 特殊
+A/

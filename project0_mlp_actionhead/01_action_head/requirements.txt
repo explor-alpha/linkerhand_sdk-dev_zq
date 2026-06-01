@@ -1,0 +1,13 @@
+# requirements.txt for project0_mlp_actionhead
+
+pandas>=2.0.0
+pyyaml>=6.0
+pyserial>=3.5
+tensorboard
+setuptools==69.5.1
+
+# -----Project: 01_action_head-----
+# 数据增强llm api
+openai
+# 预训练 embedding
+sentence-transformers>=2.5.0

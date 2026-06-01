@@ -1,8 +1,10 @@
 # .gitattributes
+# PS: 确保 git-lfs 已安装; 检验：`git lfs version`
 
-# 所有文件默认自动识别。
-# 如果是文本，入库和检出都强制转为 LF。
+# ----- LF -----
+# 所有文件默认自动识别。如果是文本，入库和检出都强制转为 LF。
 * text=auto eol=lf
+
 
 # 显式标注这些文件可以防止 Git 误判。保持 LF。
 *.csv text eol=lf
@@ -18,22 +20,57 @@
 *.yaml text
 *.yml text
 
-# 唯独 Windows 的脚本保持 CRLF
-# 如果你偶尔需要写 Windows 批处理，它们必须保持 CRLF，否则 Win 下运行会乱码。
+
+# ----- CRLF(Windows专属脚本) -----
 *.bat text eol=crlf
 *.cmd text eol=crlf
 
-# 告诉 Git 这些是二进制文件，绝对不要改动里面的任何字节！
-*.pth binary
+
+# ----- binary(不做任何修改) -----
 *.xlsx binary  
-*.zip binary
-*.rar binary
-*.tar.gz binary
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.webp binary
-*.gif binary
 *.ico binary
 *.pdf binary
 *.exe binary
+
+
+# ----- LFS -----
+# GitHub 仓库 总配额：1~5GB
+# GitHub 单文件 配额：100MB
+# GitHub LFS 配额(免费账户)： 10 GB/month LFS 存储空间 & 下载带宽。
+
+
+# ----- (可能的大文件)选择 binary or LFS -----
+# 示例：
+# binary：*.gif binary
+# LFS：*.gif filter=lfs diff=lfs merge=lfs -text
+# 检查大文件：
+# `find . -type f -size +100M -not -path "*/\.git/*"`
+
+*.pth binary
+
+*.mp4 binary
+*.gif binary
+
+*.zip binary
+*.rar binary
+*.tar.gz binary
+
+
+# ----- 特殊 -----
+# Add: Isaac lab
+
+*.usda text eol=lf
+*.dae text eol=lf
+*.mtl text eol=lf
+*.obj text eol=lf
+
+*.usd binary
+*.psd binary
+*.hdr binary
+*.pt binary
+*.jit binary
+*.hdf5 binary

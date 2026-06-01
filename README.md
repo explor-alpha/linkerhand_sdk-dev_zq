@@ -7,7 +7,7 @@
 
 - **[TODO：核心模块2]**： Sim2Real最简实现Linkerhand抓取小球（关键词：*isaac 工作流*; *Sim2Real*; *Linkerhand 真机部署*） 
 - **[2026-05-30：完成核心模块1]**： 项目前置准备（关键词：*sdk*; *urdf*; *usd：本地配置isaacsim,isaaclab; isaacsim场景建模*）  
-- **[2026-04：完成核心模块0]**： (过时-前期做的工作) embedding+MLP; 输入自然语言控制 Linkerhand 运动  
+- **[2026-04：完成核心模块0]**： (过时可忽略-前期做的工作) embedding+MLP; 输入自然语言控制 Linkerhand 运动  
 
 
 ## 🎬 Show results
@@ -16,11 +16,11 @@
   <tr style="border: none;">
     <td width="50%" align="center" style="border: none;">
       <img src="show_results/module1_isaacsim_test_mimic.gif" width="100%">
-      <br><sub>[module1] Isaac Sim：场景建模</sub>
+      <br><sub>[module1] Isaac sim：Debug-mimic联动关节调试</sub>
     </td>
     <td width="50%" align="center" style="border: none;">
       <img src="show_results/module1_isaacsim_scene1.gif" width="100%">
-      <br><sub>[module1] Isaac sim：Debug-mimic联动关节调试</sub>
+      <br><sub>[module1] Isaac Sim：场景建模</sub>
     </td>
   </tr>
 </table>
@@ -77,7 +77,7 @@ linkerhand_sdk-dev_zq/
 ```
 
 
-### (过时) 核心模块0_子项目0(mlp_actionhead)
+### (过时可忽略) 核心模块0_子项目0(mlp_actionhead)
 
 > 前期做的工作：embedding+MLP; 输入自然语言控制 Linkerhand 运动  
 
@@ -111,3 +111,10 @@ cd projects_linux/own/linkerhand_sdk-dev_zq/show_results/
 
 for f in *.mp4; do ffmpeg -i "$f" -vf "fps=18,scale=-1:600:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -vsync 1 -an "${f%.mp4}.gif"; done
 ```
+
+
+TODO:
+
+模块0：结果展示 
+模块1：usd
+模块2：isaaclab 项目

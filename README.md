@@ -14,16 +14,14 @@
 
 <table style="width: 100%; border-collapse: collapse; border: none;">
   <tr style="border: none;">
-    <td width="33.3%" align="center" style="border: none;">
+    <td width="50%" align="center" style="border: none;">
       <img src="show_results/module1_isaacsim_test_mimic.gif" width="100%">
       <br><sub>[module1] Isaac Sim：场景建模</sub>
     </td>
-    <td width="33.3%" align="center" style="border: none;">
+    <td width="50%" align="center" style="border: none;">
       <img src="show_results/module1_isaacsim_scene1.gif" width="100%">
       <br><sub>[module1] Isaac sim：Debug-mimic联动关节调试</sub>
     </td>
-    <td width="33.3%" align="center" style="border: none;">
-      </td>
   </tr>
 </table>
 
@@ -113,10 +111,3 @@ cd projects_linux/own/linkerhand_sdk-dev_zq/show_results/
 
 for f in *.mp4; do ffmpeg -i "$f" -vf "fps=18,scale=-1:600:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -vsync 1 -an "${f%.mp4}.gif"; done
 ```
-
-
-TODO:
-
-模块0：结果展示 
-模块1：usd
-模块2：isaaclab重新new

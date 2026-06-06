@@ -5,6 +5,8 @@
 > [核心结果展示-文件路径](./show_results)  
 > [核心笔记分享](./show_notes)  
 
+- **[TODO：加入视觉模块]**：  
+- **[TODO：论文复现]**：  
 - **[TODO：核心模块2]**： Sim2Real最简实现Linkerhand抓取小球（关键词：*isaac 工作流*; *Sim2Real*; *Linkerhand 真机部署*） 
 - **[2026-05-30：完成核心模块1]**： 项目前置准备（关键词：*sdk*; *urdf*; *usd：本地配置isaacsim,isaaclab; isaacsim场景建模*）  
 - **[2026-04：完成核心模块0]**： (过时可忽略-前期做的工作) embedding+MLP; 输入自然语言控制 Linkerhand 运动  
@@ -12,15 +14,41 @@
 
 ## 🎬 Show results
 
+
 <table style="width: 100%; border-collapse: collapse; border: none;">
   <tr style="border: none;">
     <td width="50%" align="center" style="border: none;">
-      <img src="show_results/module1_isaacsim_test_mimic.gif" width="100%">
-      <br><sub>[module1] Isaac sim：Debug-mimic联动关节调试</sub>
+      <img src=".gif" width="100%">
+      <br><sub>control_RL</sub>
     </td>
     <td width="50%" align="center" style="border: none;">
-      <img src="show_results/module1_isaacsim_scene1.gif" width="100%">
-      <br><sub>[module1] Isaac Sim：场景建模</sub>
+      <img src="show_results/control_direct.gif" width="100%">
+      <br><sub>control_direct</sub>
+    </td>
+  </tr>
+</table>
+
+<br/>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test14_random_agent.gif" width="100%">
+      <br><sub>isaac lab：random_agent测试</sub>
+    </td>
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test13_lite.gif" width="100%">
+      <br><sub>自定义轻量化测试</sub>
+    </td>
+  </tr>
+  <tr style="border: none;">
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test12_joint_isaacsim.gif" width="100%">
+      <br><sub>测试联动关节&关节移动&极限值（通过isaac sim交互）</sub>
+    </td>
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test11_joint_code.gif" width="100%">
+      <br><sub>测试联动关节&关节移动&极限值（通过代码）</sub>
     </td>
   </tr>
 </table>
@@ -111,10 +139,3 @@ cd projects_linux/own/linkerhand_sdk-dev_zq/show_results/
 
 for f in *.mp4; do ffmpeg -i "$f" -vf "fps=18,scale=-1:600:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -vsync 1 -an "${f%.mp4}.gif"; done
 ```
-
-
-TODO:
-
-模块0：结果展示 
-模块1：usd
-模块2：isaaclab 项目

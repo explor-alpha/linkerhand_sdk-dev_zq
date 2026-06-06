@@ -1,3 +1,6 @@
+# 子项目：自然语言控制 Linkerhand O6 （目前弃置）
+
+> Embedding+MLP 实现自然语言控制灵巧手做基本手势动作（例如比耶）
 
 ## 环境配置：
 
@@ -35,26 +38,14 @@ pip install torch==2.7.0 torchvision==0.22.0 torchaudio==2.7.0 --index-url https
 pip install -r requirements.txt
 ```
 
-### URDF
-```zsh
-git clone git@github.com:linker-bot/linkerhand-urdf.git
-```
-
 ## 项目说明
 
 ```
 linkerhand_sdk-dev_zq/         
-├── sdk/                             <--（SDK_ROOT_DIR）
-│   └──LinkerHand                    <-- 官方 SDK 包 (包含 api, utils 等)
+├── o6_sdk/                                            <--（SDK_ROOT_DIR）
+│   └──LinkerHand                                   <-- 官方 SDK 包 (包含 api, utils 等)
 │
-└── project0_mlp_actionhead/
-    ├── 01_action_head               <-- my project1
-    └── TODO
-```
-
-### Project 文件结构：01_action_head 
-```
-        01_action_head/              <-- my project1主目录 (BASE_DIR)
+└── project0_mlp_actionhead/01_action_head/         <-- my project1主目录 (BASE_DIR)
 		├── data/                       # 存放所有数据 (严禁将数据随代码一起传到Git)
 		│   ├── backups/                # 1. 原始数据: 所有数据集
 		│   ├── raw/initial_data.csv    # 2. 工作台；仅放入无增强数据进行数据增强

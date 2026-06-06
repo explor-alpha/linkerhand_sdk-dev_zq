@@ -37,16 +37,21 @@ def set_joint_angle(joint_name, angle_degrees):
     print(f"[Success] Target for joint [{joint_name}] set to {angle_degrees} degrees.")
 
 # ==========================================
+
 # 4. Call the function here to test any joint you want!
-# ==========================================
 
-# Example: Bend the index finger 60 degrees
-set_joint_angle("rh_index_mcp_pitch", 60)
+O6_CONTROL_JOINTS=[    
+    "rh_thumb_cmc_yaw", "rh_thumb_cmc_pitch",
+    "rh_index_mcp_pitch", "rh_middle_mcp_pitch", 
+    "rh_ring_mcp_pitch", "rh_pinky_mcp_pitch",
+    ]
 
-# Example: Bend the middle finger 45 degrees
-set_joint_angle("rh_middle_mcp_pitch", 45)
-
-# Example: Yaw the thumb 30 degrees
 set_joint_angle("rh_thumb_cmc_yaw", 30)
+set_joint_angle("rh_thumb_cmc_pitch", 30)
+set_joint_angle("rh_index_mcp_pitch", 30)
+set_joint_angle("rh_middle_mcp_pitch", 30)
+set_joint_angle("rh_ring_mcp_pitch", 60)
+set_joint_angle("rh_pinky_mcp_pitch", 45)
+
 
 

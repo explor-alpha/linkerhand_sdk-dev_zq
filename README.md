@@ -2,17 +2,17 @@
 
 ## 🔥 News & Highlights  
 
-> [核心结果展示-文件路径](./show_results)  
-> [核心笔记分享](./show_notes)  
-
 - **[TODO：加入视觉模块]**：  
 - **[TODO：论文复现]**：  
 - **[TODO：核心模块2]**： Sim2Real最简实现Linkerhand抓取小球（关键词：*isaac 工作流*; *Sim2Real*; *Linkerhand 真机部署*） 
-- **[2026-05-30：完成核心模块1]**： 项目前置准备（关键词：*sdk*; *urdf*; *usd：本地配置isaacsim,isaaclab; isaacsim场景建模*）  
-- **[2026-04：完成核心模块0]**： (过时可忽略-前期做的工作) embedding+MLP; 输入自然语言控制 Linkerhand 运动  
+- **[2026-05-30：完成核心模块1]**： 项目前置准备（关键词：*sdk*; *urdf*; *本地配置isaacsim,isaaclab*; *usd：Linkerhand usd配置*; *isaacsim：场景初始化参数调试*）  
+- **[2026-04：完成核心模块0]**： (PS: *可忽略此模块*-前期做的探索性工作) embedding+MLP; 输入自然语言控制 Linkerhand 运动  
 
 
 ## 🎬 Show results
+
+> [核心结果展示-文件路径](./show_results)  
+> [核心笔记分享](./show_notes)  
 
 
 <table style="width: 100%; border-collapse: collapse; border: none;">
@@ -60,38 +60,27 @@
 
 ## 项目整体结构  
 
-### 核心模块1：Tools & 前置准备  
+### 核心模块1：项目前期准备和测试
 
-- [前置准备：o6_sdk 环境部署——README](./o6_sdk/README_note.md)  
-- [前置准备：Isaac 环境部署——README](./o6_usd/README.md)
+> 本模块关注：项目前期的准备和测试，包括*真机需要的 sdk*; *isaacsim/isaaclab 配置*; *isaaclab-RL-simulation 需要的 usd* 和 *场景初始化参数调试*   
 
-```
-linkerhand_sdk-dev_zq/    
-│     
-├── o6_sdk/              # Linkerhand O6 官方 SDK;（SDK_ROOT_DIR）
-│   ├── LinkerHand                          # Key！接口
-│   ├── LinkerHand/config/setting.yaml      # 修改配置 (自定义)
-│   ├── example/gui_control/gui_control.py  # test (官方)
-│   ├── test_sdk.py                         # test (自定义)
-│   └── requirements.txt
-│    
-├── o6_urdf/             # Linkerhand O6 官方 URDF
-│    
-└── o6_usd/              # Isaac Sim 构建好的通用型组件 .usd (自定义)
-```
+- [README_前置准备：sdk](./o6_sdk/README_sdk.md)  
+- [README_前置准备：usd & isaac 部署](./o6_usd/README.md)
 
 
 ### 核心模块2：子项目1(basic_grasp)  
 
 > 本模块关注：*最简实现 Linkerhand 抓取小球*： *isaac 工作流* ; *Sim2Real* ; *Linkerhand 真机部署*  
 
-- [project1: README.md](./project1_basic_grasp/README_grasp.md)  
-- [sim 部分：环境配置——README](./project1_basic_grasp/o6_sim/README_sim.md)   
-- [real 部分：环境配置——README](./project1_basic_grasp/o6_real/README_real.md)   
+- [README_project1(basic_grasp)](./project1_basic_grasp/README_grasp.md)  
+- [环境配置_simulation](./project1_basic_grasp/o6_sim/README_sim.md)   
+- [环境配置_real](./project1_basic_grasp/o6_real/README_real.md)   
 
 ```
 linkerhand_sdk-dev_zq/    
 ├── o6_usd/              # Tool For simulation
+│   └── linkerhand_o6_right/linkerhand_o6_right.usd  # Key! Isaac lab 中导入
+│
 ├── o6_sdk/              # Tool For real
 │   └── LinkerHand/      # Key！SDK 接口
 │

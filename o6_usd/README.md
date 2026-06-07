@@ -1,15 +1,27 @@
-# Isaac 配置
+# README：usd 资产准备
 
 ## 文件结构
+
+> 注意文件结构不要轻易变动！usd 中有 references 关系！  
 
 ```
 linkerhand_sdk-dev_zq/    
 ├── o6_urdf/             # 模型文件（Linkerhand O6 官方 URDF）
 └── o6_usd/              # 模型文件（Isaac Sim 自定义 usd）   
-    ├── myo6_zq.usd                  # Isaac Sim: 场景建模（导入linkerhand&debug-mimic联动关节; 添加物体&物理参数; 添加双目深度相机&视角; 设置root关节&固定; 等等）
+    │
+    ├── linkerhand_o6_right/         # 灵巧手 usd （独立资产）
+    │   ├── configuration
+    │   └── linkerhand_o6_right.usd  # Key: Isaac lab 中导入
+    ├── my_asset                     # 独立资产
+    │
+    ├── scene1.usd                   # 场景建模，测试记录参数
+    │
     ├── test_isaacsim/               # test-Isaac Sim (control & sensor)
-    └── test_isaaaclab/              # test-Isaac lab (control)
+    ├── test_isaaaclab/              # test-Isaac lab (control)
+    │
+    └── README.md
 ```
+
 
 ## Isaac 环境配置  
 

@@ -16,6 +16,7 @@ from isaaclab.managers import SceneEntityCfg  # 获取状态信息
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import CameraCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 from isaaclab.actuators import ImplicitActuatorCfg
 
@@ -27,21 +28,21 @@ from . import mdp
 # 本模块参数设置：导入 isaac sim scene 中测试好的参数
 ##
 
+# 暂时忽略小指
 # Linkerhand o6 right： 6 个主动关节
 O6_CONTROL_JOINTS=[    
     "rh_thumb_cmc_yaw", "rh_thumb_cmc_pitch",
     "rh_index_mcp_pitch", "rh_middle_mcp_pitch", 
-    "rh_ring_mcp_pitch", "rh_pinky_mcp_pitch",
+    "rh_ring_mcp_pitch", # "rh_pinky_mcp_pitch",
     ]
 
-# TODO
 # Linkerhand o6 right： 5 指尖刚体，用于距离奖励设计
 O6_FINGERTIP_NAMES=[
         "rh_thumb_distal",
         "rh_index_distal",
         "rh_middle_distal",
         "rh_ring_distal",
-        "rh_pinky_distal",
+        # "rh_pinky_distal",
     ]
 
 
@@ -74,6 +75,9 @@ class BasicGraspSceneCfg(InteractiveSceneCfg):
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 # kinematic_enabled=True,  # Ture 则小球被固定在原位，不会被推动
                 disable_gravity=True, # 禁用重力
+                # 【核心修改】添加极大的阻尼，模拟悬挂绳的约束或在浓稠液体中的感觉
+                linear_damping=10.0,  # 让小球极难被推动，即使受力也会瞬间停下
+                angular_damping=10.0, # 防止小球狂转                
             ),
             mass_props=sim_utils.MassPropertiesCfg(density=10.0), # 密度 10
             physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -82,7 +86,7 @@ class BasicGraspSceneCfg(InteractiveSceneCfg):
             collision_props=sim_utils.CollisionPropertiesCfg(), # 碰撞属性
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.8, 0.1, 0.1)),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.055, 0.007, 0.143)), # scene
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(-0.04503, 0.00653, 0.13394)), # scene; (-0.04503, 0.00653, 0.13394)
     )
 
     # 4. 灵巧手 (Articulation)
@@ -134,6 +138,7 @@ class BasicGraspSceneCfg(InteractiveSceneCfg):
         },
     )
 
+    """
     # 5. D455 相机 (直接挂载在环境中或手掌上)
     camera = CameraCfg(
         prim_path="{ENV_REGEX_NS}/Camera",
@@ -144,14 +149,22 @@ class BasicGraspSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.PinholeCameraCfg(
             focal_length=24.0, focus_distance=400.0, horizontal_aperture=20.955, clipping_range=(0.01, 10.0)
         ),
-        # 对应 PDF 中的坐标
         offset=CameraCfg.OffsetCfg(pos=(0.1358, 0.02347, 0.28703)), 
-    )
+    )    
+    """
 
     # 6. 光源
     dome_light = AssetBaseCfg(
         prim_path="/World/DomeLight",
         spawn=sim_utils.DomeLightCfg(color=(0.9, 0.9, 0.9), intensity=1000.0),
+    )
+
+    # 新增: 声明一个接触传感器，挂载到机器人的所有 Link 上
+    contact_forces = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/.*", 
+        history_length=3, 
+        track_air_time=False,
+        update_period=0.0
     )
 
 ##
@@ -177,14 +190,24 @@ class ObservationsCfg:
     """Observation specifications for the MDP."""
     @configclass
     class PolicyCfg(ObsGroup):
-        """Observations for policy group."""
+        """Observations for policy group. (纯本体感知盲抓)"""
         # 1. 关节位置 (11维)
-        joint_pos = ObsTerm(func=mdp.joint_pos, params={"asset_cfg": SceneEntityCfg("robot", joint_names=O6_CONTROL_JOINTS)})
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos, 
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=O6_CONTROL_JOINTS)}
+        )
         # 2. 关节速度 (11维)
-        joint_vel = ObsTerm(func=mdp.joint_vel, params={"asset_cfg": SceneEntityCfg("robot", joint_names=O6_CONTROL_JOINTS)})
-        # 3. 指尖到小球相对距离向量 (15维)
+        joint_vel = ObsTerm(
+            func=mdp.joint_vel, 
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=O6_CONTROL_JOINTS)}
+        )
+        # 3. 上一时刻的动作指令 (完美替代"上一时刻关节角度"，提供时序上下文)
+        last_action = ObsTerm(func=mdp.last_action)
+
+        """
+        # 4. 指尖到小球相对距离向量 (15维)
         tip_rel = ObsTerm(
-            func=mdp.tip_to_ball_rel, # [TODO]
+            func=mdp.tip_to_ball_rel, 
             params={
                 "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
                 "ball_cfg": SceneEntityCfg("ball")
@@ -192,7 +215,9 @@ class ObservationsCfg:
         )
 
         # 注意：深度相机的图像数据不能直接和上面的低维数据连结 (concatenate)，
-        # 如果要用相机，需要在算法库 (如 skrl) 层面进行特征提取分离，这里暂且用低维状态。
+        # 如果要用相机，需要在算法库 (如 skrl) 层面进行特征提取分离，这里暂且用低维状态。        
+        """
+
         
         def __post_init__(self) -> None:
             self.enable_corruption = False
@@ -208,7 +233,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("ball"),
-            "pose_range": {"x": (-0.003, 0.003), "y": (-0.003, 0.003), "z": (-0.003, 0.003)}, # Domain Randomization，相对 ball 初始位置
+            "pose_range": {"x": (-0.001, 0.001), "y": (-0.001, 0.001), "z": (-0.001, 0.001)}, # Domain Randomization，相对 ball 初始位置
             "velocity_range": {}, # 不随机速度，且=0
         },
     )
@@ -224,56 +249,103 @@ class EventCfg:
     )
 
 @configclass
-# [TODO]
 class RewardsCfg:
     """Reward terms for the MDP."""
-    # 1. 指尖距离奖励 (系数 3.0)
+
+    # 1. 主线任务：指尖平均距离奖励 (权重最大，驱动智能体伸手)
     tip_dist = RewTerm(
         func=mdp.fingertip_distance_reward,
-        weight=3.0,
+        weight=5.0,
         params={
             "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
-            "ball_cfg": SceneEntityCfg("ball")
+            "ball_cfg": SceneEntityCfg("ball"),
+            "bounds": (0.000, 0.020),     
+            "margin": 0.070,         
+            "sigmoid": "gaussian"   
         }
     )
-    """
-    # 2. 接触力奖励 (系数 1.0)
-    contact = RewTerm(
-        func=mdp.fingertip_contact_reward,
-        weight=1.0,
+    
+    # 2. 姿态任务：指尖距离方差 (权重适中，驱动智能体在靠近的过程中保持合围)
+    # 只要这 1.5 分加上去，由于底层是加权求和，同等距离下，对称姿态的得分永远高于歪七扭八的姿态
+    tip_variance = RewTerm(
+        func=mdp.fingertip_distance_variance_reward, 
+        weight=1.5,  
         params={
             "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
+            "ball_cfg": SceneEntityCfg("ball"),
+            "margin": 0.08  # 如果某根手指离群达到 8cm，则该项拿不到分
+        }
+    )
+
+    # 3. 终极目标：指尖平均接触力引导
+    contact = RewTerm(
+        func=mdp.fingertip_contact_reward,
+        weight=2.0,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=O6_FINGERTIP_NAMES),
             "threshold": 0.5
         }
     )    
+
+    # 4. 正则惩罚：动作输出幅度
+    action_penalty = RewTerm(
+        func=mdp.action_smoothness_penalty, 
+        weight=0.1  # 注意：由于原函数返回 [-1, 0]，这里填正数即可
+    )
+
+    # 5. 成功终止补偿
+    success_bonus_reward = RewTerm(
+        func=mdp.success_bonus,
+        weight=4000.0,  # 给予极高的奖励，驱使智能体追求最快速度完成抓取
+        params={
+            # 参数必须与 TerminationsCfg 中的 success 完全对齐
+            "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
+            "ball_cfg": SceneEntityCfg("ball"),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=O6_FINGERTIP_NAMES), 
+            "contact_thresh": 0.5,
+            "min_contacts": 4,     
+            "max_ball_vel": 0.05
+        }
+    )
+
+    """
+    # 6. 正则惩罚：关节速度 
+    vel_penalty = RewTerm(
+        func=mdp.joint_vel_penalty,
+        weight=0.3,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=O6_CONTROL_JOINTS),
+            "max_vel": 2.5  # 容忍的最大关节范数速度，超过后扣分逼近满额 (-0.3)
+        }
+    )   
     """
 
-    # 3. 动作平滑度惩罚 (系数 0.001) - 惩罚动作的 L2 范数
-    action_penalty = RewTerm(func=mdp.action_l2, weight=-0.001)
 
 @configclass
-# [TODO]
 class TerminationsCfg:
     """Termination terms for the MDP."""
     # (1) 超时
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    # (2) 如果小球掉落出界则结束 (虽然禁用了重力，但防止手把它拍飞)
+    
+    # (2) 出界
     ball_out_of_bounds = DoneTerm(
-        func=mdp.root_height_below_minimum,
-        params={"minimum_height": -0.1, "asset_cfg": SceneEntityCfg("ball")},
+        func=mdp.root_pos_out_of_bounds, 
+        params={"asset_cfg": SceneEntityCfg("ball"), "max_distance": 0.005},
     )
 
-    # success
+    # (3) 成功
     success = DoneTerm(
-        func=mdp.success_termination, # [TODO]
+        func=mdp.success_termination, 
         params={
             "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
             "ball_cfg": SceneEntityCfg("ball"),
-            "dist_thresh": 0.03,
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=O6_FINGERTIP_NAMES), 
             "contact_thresh": 0.5,
-            "min_contacts": 3
+            "min_contacts": 4,     # 强制 4 指参与
+            "max_ball_vel": 0.05   # 防止拍击
         }
     )
+
 ##
 # Environment configuration
 ##
@@ -288,7 +360,7 @@ scene:
 @configclass
 class BasicGraspEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: BasicGraspSceneCfg = BasicGraspSceneCfg(num_envs=256, env_spacing=1.0)
+    scene: BasicGraspSceneCfg = BasicGraspSceneCfg(num_envs=1024, env_spacing=1.0)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -300,11 +372,11 @@ class BasicGraspEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self) -> None:
         """Post initialization."""
         # general settings
-        self.decimation = 2 # 控制频率
+        self.decimation = 2 # 每2次计算输出一次动作
         self.episode_length_s = 6.0 # 每回合 6 秒
         # viewer settings
         self.viewer.eye = (0.5, 0.5, 0.5)
         self.viewer.lookat = (0.0, 0.0, 0.2)
         # simulation settings
-        self.sim.dt = 1 / 120 
-        self.sim.render_interval = self.decimation
+        self.sim.dt = 1 / 120   # 物理引擎计算频率：120Hz
+        self.sim.render_interval = self.decimation #  控制频率：60Hz

@@ -32,8 +32,10 @@ from . import mdp
 # Linkerhand o6 right： 6 个主动关节
 O6_CONTROL_JOINTS=[    
     "rh_thumb_cmc_yaw", "rh_thumb_cmc_pitch",
-    "rh_index_mcp_pitch", "rh_middle_mcp_pitch", 
-    "rh_ring_mcp_pitch", # "rh_pinky_mcp_pitch",
+    "rh_index_mcp_pitch", 
+    "rh_middle_mcp_pitch", 
+    "rh_ring_mcp_pitch", 
+    # "rh_pinky_mcp_pitch",
     ]
 
 # Linkerhand o6 right： 5 指尖刚体，用于距离奖励设计
@@ -73,11 +75,11 @@ class BasicGraspSceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.SphereCfg(
             radius=0.027, # scene
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
-                # kinematic_enabled=True,  # Ture 则小球被固定在原位，不会被推动
+                #kinematic_enabled=True,  # Ture 则小球被固定在原位，不会被推动 # TODO
                 disable_gravity=True, # 禁用重力
                 # 【核心修改】添加极大的阻尼，模拟悬挂绳的约束或在浓稠液体中的感觉
-                linear_damping=10.0,  # 让小球极难被推动，即使受力也会瞬间停下
-                angular_damping=10.0, # 防止小球狂转                
+                linear_damping=100.0,  # 让小球极难被推动，即使受力也会瞬间停下
+                angular_damping=100.0, # 防止小球狂转                
             ),
             mass_props=sim_utils.MassPropertiesCfg(density=10.0), # 密度 10
             physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -260,16 +262,29 @@ class RewardsCfg:
             "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
             "ball_cfg": SceneEntityCfg("ball"),
             "bounds": (0.000, 0.020),     
-            "margin": 0.070,         
+            "margin": 0.120,         
             "sigmoid": "gaussian"   
         }
     )
+
+    # 2. 【新增】对立抓取奖励 (权重设为 3.0 或 4.0)
+    # 这个分数逼迫它：在你靠近球的同时，大拇指必须和其他三根手指分开，包抄球的后路！
+    antipodal = RewTerm(
+        func=mdp.antipodal_grasp_reward,
+        weight=4.0,
+        params={
+            "robot_cfg": SceneEntityCfg("robot"),
+            "ball_cfg": SceneEntityCfg("ball"),
+            "thumb_name": "rh_thumb_distal",
+            "other_fingers": ["rh_index_distal", "rh_middle_distal", "rh_ring_distal"]
+        }
+    )
     
-    # 2. 姿态任务：指尖距离方差 (权重适中，驱动智能体在靠近的过程中保持合围)
-    # 只要这 1.5 分加上去，由于底层是加权求和，同等距离下，对称姿态的得分永远高于歪七扭八的姿态
+    # 3. 姿态任务：指尖距离方差 (权重适中，驱动智能体在靠近的过程中保持合围)
+    # 由于底层是加权求和，同等距离下，对称姿态的得分永远高于歪七扭八的姿态
     tip_variance = RewTerm(
         func=mdp.fingertip_distance_variance_reward, 
-        weight=1.5,  
+        weight=1.0,  
         params={
             "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
             "ball_cfg": SceneEntityCfg("ball"),
@@ -277,7 +292,7 @@ class RewardsCfg:
         }
     )
 
-    # 3. 终极目标：指尖平均接触力引导
+    # 4. 终极目标：指尖平均接触力引导
     contact = RewTerm(
         func=mdp.fingertip_contact_reward,
         weight=2.0,
@@ -287,16 +302,16 @@ class RewardsCfg:
         }
     )    
 
-    # 4. 正则惩罚：动作输出幅度
+    # 5. 正则惩罚：动作输出幅度
     action_penalty = RewTerm(
         func=mdp.action_smoothness_penalty, 
         weight=0.1  # 注意：由于原函数返回 [-1, 0]，这里填正数即可
     )
 
-    # 5. 成功终止补偿
+    # 6. 成功终止补偿
     success_bonus_reward = RewTerm(
         func=mdp.success_bonus,
-        weight=4000.0,  # 给予极高的奖励，驱使智能体追求最快速度完成抓取
+        weight=20.0,  # 给予极高的奖励，驱使智能体追求最快速度完成抓取
         params={
             # 参数必须与 TerminationsCfg 中的 success 完全对齐
             "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
@@ -326,13 +341,14 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
     # (1) 超时
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
-    
+
     # (2) 出界
     ball_out_of_bounds = DoneTerm(
         func=mdp.root_pos_out_of_bounds, 
-        params={"asset_cfg": SceneEntityCfg("ball"), "max_distance": 0.005},
-    )
+        params={"asset_cfg": SceneEntityCfg("ball"), "max_distance": 0.060},  # 0.005
+    )    
 
+    """
     # (3) 成功
     success = DoneTerm(
         func=mdp.success_termination, 
@@ -344,7 +360,9 @@ class TerminationsCfg:
             "min_contacts": 4,     # 强制 4 指参与
             "max_ball_vel": 0.05   # 防止拍击
         }
-    )
+    )    
+    """
+
 
 ##
 # Environment configuration
@@ -360,7 +378,7 @@ scene:
 @configclass
 class BasicGraspEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: BasicGraspSceneCfg = BasicGraspSceneCfg(num_envs=1024, env_spacing=1.0)
+    scene: BasicGraspSceneCfg = BasicGraspSceneCfg(num_envs=2048, env_spacing=1.0)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()

@@ -11,7 +11,7 @@ ROBOT_PRIM_PATH = "/World/linker_o6_right_v1_0_urdf"
 
 # 2. Confirm the fingertip contact sensor's path
 FINGERTIP_SENSORS = {
-    "Index Finger": f"{ROBOT_PRIM_PATH}/index_distal/collisions/Contact_Sensor"
+    "Index Finger": f"{ROBOT_PRIM_PATH}/rh_index_distal/collisions/Contact_Sensor"
 }
 
 # Bind robot and sensor interfaces
@@ -36,7 +36,7 @@ def move_joints(joint_names, angles_deg):
 async def grasp_sequence():
     print("\n[Action 1] Thumb yaw (Pre-grasp) ...")
     # Step 1: Only yaw the thumb (100 degrees)
-    move_joints(["thumb_cmc_yaw"], [100])
+    move_joints(["rh_thumb_cmc_yaw"], [100])
     
     # Step 2: Wait 1.5 seconds (Note: NEVER use time.sleep, it will freeze the physics engine)
     await asyncio.sleep(1.5)
@@ -44,7 +44,7 @@ async def grasp_sequence():
     print("\n[Action 2] Other fingers start closing to grasp! ...")
     # Step 3: Close the 4 fingers (50 degrees) and pitch the thumb base (10 degrees)
     move_joints(
-        ["index_mcp_pitch", "middle_mcp_pitch", "ring_mcp_pitch", "pinky_mcp_pitch", "thumb_cmc_pitch"], 
+        ["rh_index_mcp_pitch", "rh_middle_mcp_pitch", "rh_ring_mcp_pitch", "rh_pinky_mcp_pitch", "rh_thumb_cmc_pitch"], 
         [50, 50, 50, 50, 10]
     )
 

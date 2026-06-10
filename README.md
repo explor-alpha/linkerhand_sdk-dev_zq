@@ -4,69 +4,21 @@
 
 - **[TODO：加入视觉模块]**：  
 - **[TODO：论文复现]**：  
-- **[TODO：核心模块2]**： Sim2Real最简实现Linkerhand抓取小球（关键词：*isaac 工作流*; *Sim2Real*; *Linkerhand 真机部署*） 
-- **[2026-05-30：完成核心模块1]**： 项目前置准备（关键词：*sdk*; *urdf*; *本地配置isaacsim,isaaclab*; *usd：Linkerhand usd配置*; *isaacsim：场景初始化参数调试*）  
+- **[TODO：核心模块2]**： 最简实现 Linkerhand 抓取小球 RL & Sim2Real（**关键词**：**isaac-workflow**; **RL**; **Sim2Real**; **Linkerhand 真机部署**） 
+- **[2026-05-30：完成核心模块1]**： 项目前置准备（**关键词**：**sdk**; **urdf**; **usd**; **test**; **isaacsim,isaaclab**）  
 - **[2026-04：完成核心模块0]**： (PS: *可忽略此模块*-前期做的探索性工作) embedding+MLP; 输入自然语言控制 Linkerhand 运动  
 
 
 ## 🎬 Show results
 
-> [核心结果展示-文件路径](./show_results)  
-> [核心笔记分享](./show_notes)  
-
-
-<table style="width: 100%; border-collapse: collapse; border: none;">
-  <tr style="border: none;">
-    <td width="50%" align="center" style="border: none;">
-      <img src=".gif" width="100%">
-      <br><sub>control_RL</sub>
-    </td>
-    <td width="50%" align="center" style="border: none;">
-      <img src="show_results/control_direct.gif" width="100%">
-      <br><sub>control_direct</sub>
-    </td>
-  </tr>
-</table>
-
-<br/>
-
-<table style="width: 100%; border-collapse: collapse; border: none;">
-  <tr style="border: none;">
-    <td width="50%" align="center" style="border: none;">
-      <img src="show_results/test14_random_agent.gif" width="100%">
-      <br><sub>isaac lab：random_agent测试</sub>
-    </td>
-    <td width="50%" align="center" style="border: none;">
-      <img src="show_results/test13_lite.gif" width="100%">
-      <br><sub>自定义轻量化测试</sub>
-    </td>
-  </tr>
-  <tr style="border: none;">
-    <td width="50%" align="center" style="border: none;">
-      <img src="show_results/test12_joint_isaacsim.gif" width="100%">
-      <br><sub>测试联动关节&关节移动&极限值（通过isaac sim交互）</sub>
-    </td>
-    <td width="50%" align="center" style="border: none;">
-      <img src="show_results/test11_joint_code.gif" width="100%">
-      <br><sub>测试联动关节&关节移动&极限值（通过代码）</sub>
-    </td>
-  </tr>
-</table>
-
+> [show_videos](./show_results)  
+> [share_notes](./show_notes)  
 
 ---
 ---
 
 
 ## 项目整体结构  
-
-### 核心模块1：项目前期准备和测试
-
-> 本模块关注：项目前期的准备和测试，包括*真机需要的 sdk*; *isaacsim/isaaclab 配置*; *isaaclab-RL-simulation 需要的 usd* 和 *场景初始化参数调试*   
-
-- [README_前置准备：sdk](./o6_sdk/README_sdk.md)  
-- [README_前置准备：usd & isaac 部署](./o6_usd/README.md)
-
 
 ### 核心模块2：子项目1(basic_grasp)  
 
@@ -92,6 +44,88 @@ linkerhand_sdk-dev_zq/
 │ 
 └── README_grasp.md
 ```
+
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="100%" align="center" style="border: none;">
+      <img src="show_results/test21_isaacsim_scene.png" width="60%">
+      <br><sub>test21 isaac sim：create scene & 获取环境参数</sub>
+    </td>
+  </tr>
+</table>
+
+<br/>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test22_isaaclab_random_agent.gif" width="100%">
+      <br><sub>test22 isaac lab：random_agent</sub>
+    </td>
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test23_isaaclab_zero_agent.gif" width="100%">
+      <br><sub>test23 isaac lab：zero_agent</sub>
+    </td>
+  </tr>
+</table>
+
+<br/>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/control_direct.gif" width="100%">
+      <br><sub>control_direct</sub>
+    </td>
+    <td width="50%" align="center" style="border: none;">
+      <img src=".gif" width="100%">
+      <br><sub>TODO: control_RL</sub>
+    </td>
+  </tr>
+</table>
+
+
+### 核心模块1：项目前期准备和测试
+
+> 本模块实现：
+>   1. 部署 sdk：后续 linkerhand o6 **实机部署**需要的接口
+>   2. 配置并测试 usd：后续 linkerhand o6 **仿真**需要的独立资产
+>   3. 测试 (control by isaacsim; code; isaaclab); 确保底层控制的准确性
+
+- [README_前置准备：sdk](./o6_sdk/README_sdk.md)  
+- [README_前置准备：usd & isaac 部署](./o6_usd/README.md)
+
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test11_urdf.gif" width="100%">
+      <br><sub>test11 urdf(联动关节，关节极限)</sub>
+    </td>
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/test12_usd.gif" width="75%">
+      <br><sub>test12 usd（debug：联动关节，设置Articulation Root，FixedJoint，测试关节运动，测试触觉传感器）</sub>
+    </td>
+  </tr>
+</table>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="33%" align="center" style="border: none;">
+      <img src="show_results/test13_control-by-isaacsim.gif" width="100%">
+      <br><sub>test13 control by isaacsim</sub>
+    </td>
+    <td width="33%" align="center" style="border: none;">
+      <img src="show_results/test14_control-by-code.gif" width="75%">
+      <br><sub>test14 control by code</sub>
+    </td>    
+    <td width="33%" align="center" style="border: none;">
+      <img src="show_results/test15_control-by-isaaclab.gif" width="100%">
+      <br><sub>test15 control by isaaclab</sub>
+    </td>
+  </tr>
+</table>
 
 
 ### (过时可忽略) 核心模块0_子项目0(mlp_actionhead)

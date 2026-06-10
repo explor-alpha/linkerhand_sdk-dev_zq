@@ -102,6 +102,62 @@ def fingertip_distance_reward(
     # 返回 5 根手指的平均 tolerance 得分
     return reward_per_finger.mean(dim=-1)
 
+def antipodal_grasp_reward(
+    env: ManagerBasedRLEnv, 
+    robot_cfg: SceneEntityCfg, 
+    ball_cfg: SceneEntityCfg,
+    thumb_name: str = "rh_thumb_distal",  # 大拇指的刚体名称
+    other_fingers: list[str] = ["rh_index_distal", "rh_middle_distal", "rh_ring_distal"] # 其他手指
+) -> torch.Tensor:
+    """
+    [Reward] 对立抓取（Antipodal Grasp）奖励。
+    计算大拇指到球心的向量，以及其他手指（质心）到球心的向量。
+    通过向量的点积（Cosine Similarity），强制要求它们从球的【两端】夹击。
+    """
+    robot: Articulation = env.scene[robot_cfg.name]
+    ball: RigidObject = env.scene[ball_cfg.name]
+    
+    # 1. 获取小球的世界坐标 [num_envs, 3]
+    ball_pos_w = ball.data.root_pos_w
+    
+    # 2. 找到大拇指和其他手指在 body_names 中的索引
+    body_names = robot.data.body_names
+    thumb_idx = body_names.index(thumb_name)
+    other_idx = [body_names.index(name) for name in other_fingers]
+    
+    # 3. 获取手指的世界坐标 [num_envs, 3]
+    thumb_pos_w = robot.data.body_pos_w[:, thumb_idx, :]
+    other_pos_w = robot.data.body_pos_w[:, other_idx, :] # [num_envs, 3, 3]
+    
+    # 4. 计算其他手指的“几何中心”（质心）坐标 [num_envs, 3]
+    # 这样就把食指、中指、无名指当成一个“大板子”来和拇指对抗
+    other_center_w = other_pos_w.mean(dim=1)
+    
+    # 5. 计算指向球心的方向向量
+    # 向量：大拇指 -> 球心
+    vec_thumb_to_ball = ball_pos_w - thumb_pos_w
+    # 向量：其他手指中心 -> 球心
+    vec_other_to_ball = ball_pos_w - other_center_w
+    
+    # 6. 向量归一化 (转换为单位向量，长度为 1)
+    dir_thumb = torch.nn.functional.normalize(vec_thumb_to_ball, p=2, dim=-1)
+    dir_other = torch.nn.functional.normalize(vec_other_to_ball, p=2, dim=-1)
+    
+    # 7. 计算点积 (Cosine Similarity) [-1.0, 1.0]
+    # 如果大拇指和其他手指在球的同一侧（搓球），方向相同，点积接近 1.0
+    # 如果它们在球的两侧（完美对立抓取），方向相反，点积接近 -1.0
+    cos_sim = torch.sum(dir_thumb * dir_other, dim=-1)
+    
+    # 8. 奖励映射：点积越接近 -1.0，得分越接近 1.0
+    # 我们用 tolerance，把目标设为 -1.0（完美对立）
+    reward = tolerance_torch(
+        x=cos_sim,
+        bounds=(-1.0, -0.8),  # 核心区：只要夹角大于 143 度，就给满分
+        margin=1.8,           # 引导区：从 1.0 (同侧) 一路降到 -0.8
+        sigmoid="linear"      # 线性引导它走向对立面
+    )
+    
+    return reward
 
 def fingertip_distance_variance_reward(
     env: ManagerBasedRLEnv, 

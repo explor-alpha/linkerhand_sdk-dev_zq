@@ -67,7 +67,7 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "Basic-Grasp-v0"
-    experiment_name: "test22_dones_donef_damping"
+    experiment_name: "test4_3_con_pen2_weight_kp_success"
     write_interval: auto
     checkpoint_interval: auto
 
@@ -76,5 +76,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 20000  # 4800
+  timesteps: 100000  # 4800
   environment_info: log

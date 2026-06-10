@@ -121,7 +121,7 @@ class BasicGraspSceneCfg(InteractiveSceneCfg):
                 joint_names_expr=O6_CONTROL_JOINTS, # 显式指定 6 个主动关节
 
                 # --- 1. PD-Kp/Kd ---
-                stiffness=80,  # PD-Kp；Kp 调大保证位置追踪（否则重力都克服不了）；调低增强接触柔顺性
+                stiffness=60,  # PD-Kp；Kp 调大保证位置追踪（否则重力都克服不了）；调低增强接触柔顺性
                 damping=8,     # PD-Kd；Kd 调大吸收震荡
                 
                 # --- 2. 模拟 set_torque=[94]*6 的物理约束 ---
@@ -254,7 +254,8 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
-    # 1. 主线任务：指尖平均距离奖励 (权重最大，驱动智能体伸手)
+    # -----[阶段 1 抓取姿态 & 靠近]-----
+    # 1. 指尖平均距离奖励 tip_dist 
     tip_dist = RewTerm(
         func=mdp.fingertip_distance_reward,
         weight=5.0,
@@ -267,8 +268,7 @@ class RewardsCfg:
         }
     )
 
-    # 2. 【新增】对立抓取奖励 (权重设为 3.0 或 4.0)
-    # 这个分数逼迫它：在你靠近球的同时，大拇指必须和其他三根手指分开，包抄球的后路！
+    # 2. 抓取姿态引导：对立抓取奖励 antipodal
     antipodal = RewTerm(
         func=mdp.antipodal_grasp_reward,
         weight=4.0,
@@ -276,12 +276,11 @@ class RewardsCfg:
             "robot_cfg": SceneEntityCfg("robot"),
             "ball_cfg": SceneEntityCfg("ball"),
             "thumb_name": "rh_thumb_distal",
-            "other_fingers": ["rh_index_distal", "rh_middle_distal", "rh_ring_distal"]
+            "other_fingers": ["rh_index_distal", "rh_middle_distal", "rh_ring_distal"] # 逼迫大拇指和其他三根手指分开！
         }
     )
     
-    # 3. 姿态任务：指尖距离方差 (权重适中，驱动智能体在靠近的过程中保持合围)
-    # 由于底层是加权求和，同等距离下，对称姿态的得分永远高于歪七扭八的姿态
+    # 3. 协同抓取引导：各"指尖-球距离"方差奖励 tip_variance
     tip_variance = RewTerm(
         func=mdp.fingertip_distance_variance_reward, 
         weight=1.0,  
@@ -292,48 +291,61 @@ class RewardsCfg:
         }
     )
 
-    # 4. 终极目标：指尖平均接触力引导
+    # -----[阶段 2 抓取 & 引导 success]-----
+    # 4. 指尖平均接触力奖励 contact
     contact = RewTerm(
         func=mdp.fingertip_contact_reward,
-        weight=2.0,
+        weight=3.0,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=O6_FINGERTIP_NAMES),
-            "threshold": 0.5
+            "threshold": 0.3
         }
     )    
 
-    # 5. 正则惩罚：动作输出幅度
+    # TODO. 成功引导奖励 （tolerance_torch）
+
+    # -----[penalty]-----
+    # 5. [penalty 1] 动作输出幅度正则惩罚 action_penalty
     action_penalty = RewTerm(
         func=mdp.action_smoothness_penalty, 
         weight=0.1  # 注意：由于原函数返回 [-1, 0]，这里填正数即可
     )
 
-    # 6. 成功终止补偿
+    # 6. [penalty 2] 关节速度正则惩罚 vel_penalty
+    vel_penalty = RewTerm(
+        func=mdp.joint_vel_penalty,
+        weight=0.1,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=O6_CONTROL_JOINTS),
+            "max_vel": 0.5  # 容忍的最大关节范数速度，超过后扣分逼近满额 (-0.3)
+        }
+    )   
+
+    # 7. [penalty 3] 小球位置偏移惩罚(虚拟恢复力)
+    ball_center_lock_penalty = RewTerm(
+        func=mdp.ball_center_lock_penalty,
+        weight=0.5,  # 给予极高的正向奖励，逼迫它把球稳在原点
+        params={
+            "asset_cfg": SceneEntityCfg("ball"),
+            "target_pos": (-0.04503, 0.00653, 0.13394),
+            "margin": 0.06
+        }
+    )
+    # -----[success]-----
+    # 8. [success] 成功持续奖励/成功终止补偿 success_bonus_reward
     success_bonus_reward = RewTerm(
         func=mdp.success_bonus,
-        weight=20.0,  # 给予极高的奖励，驱使智能体追求最快速度完成抓取
+        weight=20.0,  # 用持续奖励代替成功终止+瞬间高额奖励  
         params={
             # 参数必须与 TerminationsCfg 中的 success 完全对齐
             "robot_cfg": SceneEntityCfg("robot", body_names=O6_FINGERTIP_NAMES),
             "ball_cfg": SceneEntityCfg("ball"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=O6_FINGERTIP_NAMES), 
-            "contact_thresh": 0.5,
+            "contact_thresh": 0.3,
             "min_contacts": 4,     
-            "max_ball_vel": 0.05
+            "max_ball_vel": 0.003
         }
     )
-
-    """
-    # 6. 正则惩罚：关节速度 
-    vel_penalty = RewTerm(
-        func=mdp.joint_vel_penalty,
-        weight=0.3,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", joint_names=O6_CONTROL_JOINTS),
-            "max_vel": 2.5  # 容忍的最大关节范数速度，超过后扣分逼近满额 (-0.3)
-        }
-    )   
-    """
 
 
 @configclass
@@ -343,12 +355,14 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
     # (2) 出界
+    # 暂时放宽失败终止  # TODO
     ball_out_of_bounds = DoneTerm(
         func=mdp.root_pos_out_of_bounds, 
         params={"asset_cfg": SceneEntityCfg("ball"), "max_distance": 0.060},  # 0.005
     )    
 
     """
+    # 取消成功终止，用持续成功奖励代替
     # (3) 成功
     success = DoneTerm(
         func=mdp.success_termination, 
@@ -363,22 +377,14 @@ class TerminationsCfg:
     )    
     """
 
-
 ##
 # Environment configuration
 ##
 
-"""
-scene:
-        replicate_physics=True,
-        filter_collisions=True,
-不用声明观测空间？
-奖励参数？
-"""
 @configclass
 class BasicGraspEnvCfg(ManagerBasedRLEnvCfg):
     # Scene settings
-    scene: BasicGraspSceneCfg = BasicGraspSceneCfg(num_envs=2048, env_spacing=1.0)
+    scene: BasicGraspSceneCfg = BasicGraspSceneCfg(num_envs=2048, env_spacing=1.0)  # replicate_physics=True,   filter_collisions=True,
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()

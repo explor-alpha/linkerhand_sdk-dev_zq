@@ -19,14 +19,8 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
-def joint_pos_target_l2(env: ManagerBasedRLEnv, target: float, asset_cfg: SceneEntityCfg) -> torch.Tensor:
-    """Penalize joint position deviation from a target value."""
-    # extract the used quantities (to enable type-hinting)
-    asset: Articulation = env.scene[asset_cfg.name]
-    # wrap the joint positions to (-pi, pi)
-    joint_pos = wrap_to_pi(asset.data.joint_pos[:, asset_cfg.joint_ids])
-    # compute the reward
-    return torch.sum(torch.square(joint_pos - target), dim=1)
+# ----- [Observation] -----
+
 
 def tip_to_ball_rel(env: ManagerBasedRLEnv, robot_cfg: SceneEntityCfg, ball_cfg: SceneEntityCfg) -> torch.Tensor:
     """[Observation] 计算指尖到小球的相对位置向量 (N, 15)"""
@@ -43,34 +37,8 @@ def tip_to_ball_rel(env: ManagerBasedRLEnv, robot_cfg: SceneEntityCfg, ball_cfg:
     return rel.view(env.num_envs, -1)  # 展平为 [N, 15]
 
 
-def root_pos_out_of_bounds(
-    env: ManagerBasedRLEnv, 
-    asset_cfg: SceneEntityCfg, 
-    max_distance: float
-) -> torch.Tensor:
-    """
-    [Done] 越界终止：判定目标球是否偏离初始位置超过阈值。
-    利用 env_origins 修复了 Isaac Lab 并行环境下的 World vs Local 坐标系匹配问题。
-    """
-    asset: RigidObject = env.scene[asset_cfg.name]
-    
-    # 1. 获取当前小球的绝对世界坐标 [num_envs, 3]
-    current_pos_w = asset.data.root_pos_w
-    
-    # 2. 获取小球的默认【局部坐标】(即相对于各自环境中心点的偏移) [num_envs, 3]
-    default_pos_local = asset.data.default_root_state[:, :3]
-    
-    # 3. 获取这 1024 个环境各自的中心点世界坐标 [num_envs, 3]
-    env_origins = env.scene.env_origins
-    
-    # 4. 真实默认世界坐标 = 环境中心点坐标 + 局部偏移坐标
-    default_pos_w = env_origins + default_pos_local
-    
-    # 5. 计算当前世界坐标与默认世界坐标的真实物理欧式距离 [num_envs]
-    distance = torch.norm(current_pos_w - default_pos_w, dim=-1)
-    
-    # 6. 判断位移是否大于阈值
-    return distance > max_distance
+# ----- [Reward] -----
+
 
 def fingertip_distance_reward(
     env: ManagerBasedRLEnv, 
@@ -90,8 +58,7 @@ def fingertip_distance_reward(
     # 计算欧式距离 [N, 5]
     d = torch.norm(ball_pos_w - tip_pos_w, dim=-1)
     
-    # [新增] 将距离丢入 tolerance 映射 
-    # 指尖到小球的距离越接近 bounds，reward_per_finger 越接近 1.0
+    # 指尖到小球的距离
     reward_per_finger = tolerance_torch(
         x=d,
         bounds=bounds,
@@ -213,73 +180,44 @@ def fingertip_contact_reward(
     return reward_per_finger.mean(dim=-1)
 
 
-def action_smoothness_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """[Penalty] 动作平滑度惩罚 (映射至 [-1.0, 0.0])"""
-    # 获取当前步输出的动作 (通常在 [-1, 1] 之间) [N, num_actions]
-    actions = env.action_manager.action
-    action_l2 = torch.norm(actions, dim=-1)
+# def continuous_success_bonus(
+#     env: ManagerBasedRLEnv, 
+#     sensor_cfg: SceneEntityCfg, 
+#     ball_cfg: SceneEntityCfg,
+#     contact_thresh: float = 0.5,
+#     min_contacts: int = 4,
+#     perfect_vel: float = 0.005,  # 速度小于 5mm/s 视为完美静止
+#     margin_vel: float = 0.05     # 速度超过 5cm/s 时得分为 0
+# ) -> torch.Tensor:
+#     """
+#     [Reward] 连续的静力平衡奖励。
+#     结合了接触力条件（离散门槛）和速度惩罚（连续梯度）。
+#     """
+#     contact_sensor: ContactSensor = env.scene[sensor_cfg.name]
+#     ball: RigidObject = env.scene[ball_cfg.name]
+
+#     # --- 1. 接触力门槛验证 ---
+#     forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :]
+#     fmag = torch.norm(forces, dim=-1)
+#     # 有几根手指达标？ [N]
+#     contact_count = (fmag > contact_thresh).sum(dim=-1)
+#     # 只有达标手指 >= 4 的环境，才有资格拿这项奖励 (Mask)
+#     is_grasping = (contact_count >= min_contacts).float()
+
+#     # --- 2. 速度平滑评分 ---
+#     ball_vel_w = ball.data.root_vel_w[:, :3]
+#     ball_speed = torch.norm(ball_vel_w, dim=-1)
     
-    # perfect_score 在 [0, 1] 之间：动作 L2 越接近 0，得分越接近 1.0
-    perfect_score = tolerance_torch(
-        x=action_l2,
-        bounds=(0.0, 0.0),
-        margin=2.0,           # 动作 L2 范数的容忍边缘
-        sigmoid="quadratic"   # 抛物线衰减，对小动作宽容，对大动作惩罚剧增
-    )
-    # 减 1 将其转化为纯惩罚，防止智能体为了拿这部分分而原地挂机
-    return perfect_score - 1.0
+#     # 用 tolerance 给小球的“静止程度”打分 [0, 1]
+#     vel_score = tolerance_torch(
+#         x=ball_speed,
+#         bounds=(0.0, perfect_vel), # 速度在 5mm/s 内拿满分 1.0
+#         margin=margin_vel,         # 速度增大，分数平滑衰减
+#         sigmoid="gaussian"
+#     )
 
-"""
-
-def joint_vel_penalty(
-    env: ManagerBasedRLEnv, 
-    asset_cfg: SceneEntityCfg, 
-    max_vel: float = 2.0
-) -> torch.Tensor:
-    # [Penalty] 关节速度惩罚 (映射至 [-1.0, 0.0])
-    asset: Articulation = env.scene[asset_cfg.name]
-    # 获取受控关节的角速度 [N, num_joints]
-    joint_vel = asset.data.joint_vel[:, asset_cfg.joint_ids]
-    vel_l2 = torch.norm(joint_vel, dim=-1)
-    
-    perfect_score = tolerance_torch(
-        x=vel_l2,
-        bounds=(0.0, 0.0),
-        margin=max_vel,       # 超过 max_vel 后，perfect_score 逼近 0
-        sigmoid="gaussian"    # 高斯曲线，越靠近 0 越平滑
-    )
-    return perfect_score - 1.0
-
-"""
-
-
-def success_termination(
-    env: ManagerBasedRLEnv, 
-    robot_cfg: SceneEntityCfg, 
-    ball_cfg: SceneEntityCfg, 
-    sensor_cfg: SceneEntityCfg, 
-    contact_thresh: float, 
-    min_contacts: int = 4,      # 4 指
-    max_ball_vel: float = 0.05  # 核心补丁：小球线速度必须极小 (即静力平衡)
-) -> torch.Tensor:
-    """[Done] 成功条件：4指接触力达标 且 小球处于静力平衡(速度极小)"""
-    ball: RigidObject = env.scene[ball_cfg.name]
-    contact_sensor: ContactSensor = env.scene[sensor_cfg.name] 
-
-    # 1. 接触力判断
-    forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :]
-    fmag = torch.norm(forces, dim=-1)
-    # 计算有几根手指的力大于阈值
-    contact_ok = (fmag > contact_thresh).sum(dim=-1) >= min_contacts
-    
-    # 2. 静力平衡判断 (防止“拍击”作弊)
-    # 获取小球当前的世界线速度 [N, 3]
-    ball_vel_w = ball.data.root_vel_w[:, :3] 
-    ball_speed = torch.norm(ball_vel_w, dim=-1)
-    # 速度必须极其微小，证明球被稳稳“锁”住了
-    velocity_ok = ball_speed < max_ball_vel
-    
-    return contact_ok & velocity_ok
+#     # --- 3. 最终得分：只有在抓取状态下，才发放速度静止得分 ---
+#     return is_grasping * vel_score
 
 
 def success_bonus(
@@ -289,7 +227,7 @@ def success_bonus(
     sensor_cfg: SceneEntityCfg, 
     contact_thresh: float, 
     min_contacts: int = 4,      
-    max_ball_vel: float = 0.05  
+    max_ball_vel: float = 0.001  
 ) -> torch.Tensor:
     """
     [Reward] 成功补偿奖励：当满足成功终止条件时，给予单次巨额奖励。
@@ -310,6 +248,149 @@ def success_bonus(
     return is_success.float()
 
 
+# ----- [Penalty] -----
+
+
+def action_smoothness_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """[Penalty] 动作平滑度惩罚 (映射至 [-1.0, 0.0])"""
+    # 获取当前步输出的动作 (通常在 [-1, 1] 之间) [N, num_actions]
+    actions = env.action_manager.action
+    action_l2 = torch.norm(actions, dim=-1)
+    
+    # perfect_score 在 [0, 1] 之间：动作 L2 越接近 0，得分越接近 1.0
+    perfect_score = tolerance_torch(
+        x=action_l2,
+        bounds=(0.0, 0.0),
+        margin=2.0,           # 动作 L2 范数的容忍边缘
+        sigmoid="quadratic"   # 抛物线衰减，对小动作宽容，对大动作惩罚剧增
+    )
+    # 减 1 将其转化为纯惩罚，防止智能体为了拿这部分分而原地挂机
+    return perfect_score - 1.0
+
+
+
+def joint_vel_penalty(
+    env: ManagerBasedRLEnv, 
+    asset_cfg: SceneEntityCfg, 
+    max_vel: float = 2.0
+) -> torch.Tensor:
+    """[Penalty] 关节速度惩罚 (映射至 [-1.0, 0.0])"""
+    asset: Articulation = env.scene[asset_cfg.name]
+    # 获取受控关节的角速度 [N, num_joints]
+    joint_vel = asset.data.joint_vel[:, asset_cfg.joint_ids]
+    vel_l2 = torch.norm(joint_vel, dim=-1)
+    
+    perfect_score = tolerance_torch(
+        x=vel_l2,
+        bounds=(0.0, 0.0),
+        margin=max_vel,       # 超过 max_vel 后，perfect_score 逼近 0
+        sigmoid="gaussian"    # 高斯曲线，越靠近 0 越平滑
+    )
+    return perfect_score - 1.0
+
+
+def ball_center_lock_penalty(
+    env: ManagerBasedRLEnv, 
+    asset_cfg: SceneEntityCfg, 
+    target_pos: tuple[float, float, float],
+    margin: float = 0.06  # 容忍的最大偏移量 (6cm)
+) -> torch.Tensor:
+    """[Penalty] 小球中心锁定惩罚 （虚拟恢复力）。"""
+    asset: RigidObject = env.scene[asset_cfg.name]
+    
+    # 1. 获取小球当前的世界坐标
+    current_pos_w = asset.data.root_pos_w
+    
+    # 2. 计算目标坐标的世界位置 (环境原点 + 局部目标位置)
+    # 这解决了多环境并行的世界坐标漂移问题
+    target_pos_tensor = torch.tensor(target_pos, device=env.device)
+    target_pos_w = env.scene.env_origins + target_pos_tensor
+    
+    # 3. 计算欧式距离
+    dist = torch.norm(current_pos_w - target_pos_w, dim=-1)
+    
+    # 4. 映射为 0~1：在中心点拿满分，偏离 margin 后降为 0
+    ball_center_score = tolerance_torch(
+        x=dist,
+        bounds=(0.0, 0.003),  # 核心区
+        margin=margin,        # 引导区：2mm 到 6cm 之间平滑衰减
+        sigmoid="gaussian"    # 鼓励极度精准的居中
+    )
+
+    return ball_center_score - 1.0
+
+# def joint_pos_target_l2(env: ManagerBasedRLEnv, target: float, asset_cfg: SceneEntityCfg) -> torch.Tensor:
+#     """[Penalty] Penalize joint position deviation from a target value."""
+#     # extract the used quantities (to enable type-hinting)
+#     asset: Articulation = env.scene[asset_cfg.name]
+#     # wrap the joint positions to (-pi, pi)
+#     joint_pos = wrap_to_pi(asset.data.joint_pos[:, asset_cfg.joint_ids])
+#     # compute the reward
+#     return torch.sum(torch.square(joint_pos - target), dim=1)
+
+
+# ----- [Done] -----
+
+
+def root_pos_out_of_bounds(
+    env: ManagerBasedRLEnv, 
+    asset_cfg: SceneEntityCfg, 
+    max_distance: float
+) -> torch.Tensor:
+    """
+    [Done] 越界终止：判定目标球是否偏离初始位置超过阈值。
+    利用 env_origins 修复了 Isaac Lab 并行环境下的 World vs Local 坐标系匹配问题。
+    """
+    asset: RigidObject = env.scene[asset_cfg.name]
+    # 1. 获取当前小球的绝对世界坐标 [num_envs, 3]
+    current_pos_w = asset.data.root_pos_w
+    # 2. 获取小球的默认【局部坐标】(即相对于各自环境中心点的偏移) [num_envs, 3]
+    default_pos_local = asset.data.default_root_state[:, :3]
+    # 3. 获取这 1024 个环境各自的中心点世界坐标 [num_envs, 3]
+    env_origins = env.scene.env_origins
+    # 4. 真实默认世界坐标 = 环境中心点坐标 + 局部偏移坐标
+    default_pos_w = env_origins + default_pos_local
+    # 5. 计算当前世界坐标与默认世界坐标的真实物理欧式距离 [num_envs]
+    distance = torch.norm(current_pos_w - default_pos_w, dim=-1)
+    # 6. 判断位移是否大于阈值
+    return distance > max_distance
+
+
+# ----- [Success] -----
+# 成功判定：可以用于成功终止; 可以用于成功持续奖励（推荐）
+
+def success_termination(
+    env: ManagerBasedRLEnv, 
+    robot_cfg: SceneEntityCfg, 
+    ball_cfg: SceneEntityCfg, 
+    sensor_cfg: SceneEntityCfg, 
+    contact_thresh: float, 
+    min_contacts: int = 4,      # 4 指
+    max_ball_vel: float = 0.001  # 核心补丁：小球线速度必须极小 (即静力平衡)
+) -> torch.Tensor:
+    """[Success] 成功条件：4指接触力达标 且 小球处于静力平衡(速度极小)"""
+    ball: RigidObject = env.scene[ball_cfg.name]
+    contact_sensor: ContactSensor = env.scene[sensor_cfg.name] 
+
+    # 1. 接触力判断
+    forces = contact_sensor.data.net_forces_w[:, sensor_cfg.body_ids, :]
+    fmag = torch.norm(forces, dim=-1)
+    # 计算有几根手指的力大于阈值
+    contact_ok = (fmag > contact_thresh).sum(dim=-1) >= min_contacts
+    
+    # 2. 静力平衡判断 (防止“拍击”作弊)
+    # 获取小球当前的世界线速度 [N, 3]
+    ball_vel_w = ball.data.root_vel_w[:, :3] 
+    ball_speed = torch.norm(ball_vel_w, dim=-1)
+    # 速度必须极其微小，证明球被稳稳“锁”住了
+    velocity_ok = ball_speed < max_ball_vel
+    
+    return contact_ok & velocity_ok
+
+
+# ----- [Tools] -----
+
+
 def tolerance_torch(
     x: torch.Tensor,
     bounds: tuple[float, float] = (0.0, 0.0),
@@ -318,7 +399,7 @@ def tolerance_torch(
     value_at_margin: float = 0.1,
 ) -> torch.Tensor:
     """
-    PyTorch 版本的 Tolerance 奖励函数，支持 GPU 并行运算。
+    [Tools] PyTorch 版本的 Tolerance 奖励函数，支持 GPU 并行运算。
     """
     lower, upper = bounds
     if lower > upper:

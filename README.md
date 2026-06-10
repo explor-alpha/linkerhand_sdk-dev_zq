@@ -2,17 +2,19 @@
 
 ## 🔥 News & Highlights  
 
+
+- **[TODO：抓取姿态-论文复现]**：  
 - **[TODO：加入视觉模块]**：  
-- **[TODO：论文复现]**：  
-- **[TODO：核心模块2]**： 最简实现 Linkerhand 抓取小球 RL & Sim2Real（**关键词**：**isaac-workflow**; **RL**; **Sim2Real**; **Linkerhand 真机部署**） 
+- **[TODO：Sim2Real]**：实现上一模块 Sim2Real 实机部署（**关键词**：**Sim2Real**; **Linkerhand 真机部署**; **Domain Randomization**; **底层电机控制**）  
+- **[2026-06-10：完成核心模块2]**： 基于 isaaclab 最简实现 Linkerhand 抓取小球 RL 训练（**关键词**：**isaac-workflow**; **RL**; **MDP**; **reward shaping**）; 成功实现 **"贴着手掌抓"**; **"贴着手指-3指抓"** 两种抓取方式(通过不同奖励设计)
 - **[2026-05-30：完成核心模块1]**： 项目前置准备（**关键词**：**sdk**; **urdf**; **usd**; **test**; **isaacsim,isaaclab**）  
 - **[2026-04：完成核心模块0]**： (PS: *可忽略此模块*-前期做的探索性工作) embedding+MLP; 输入自然语言控制 Linkerhand 运动  
 
 
 ## 🎬 Show results
 
-> [show_videos](./show_results)  
-> [share_notes](./show_notes)  
+> [Link: show_videos](./show_results)  
+> [Link: share_notes](./show_notes)  
 
 ---
 ---
@@ -46,14 +48,68 @@ linkerhand_sdk-dev_zq/
 ```
 
 
+<br/>
+
+> final: result (control by RL vs control directly)
+
 <table style="width: 100%; border-collapse: collapse; border: none;">
   <tr style="border: none;">
-    <td width="100%" align="center" style="border: none;">
-      <img src="show_results/test21_isaacsim_scene.png" width="60%">
-      <br><sub>test21 isaac sim：create scene & 获取环境参数</sub>
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/comtrol_rl_2026-06-10_20-05-58.gif" width="90%">
+      <br><sub>control_RL</sub>
+    </td>
+</table>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+    <td width="50%" align="center" style="border: none;">
+      <img src="show_results/control_direct.gif" width="90%">
+      <br><sub>control_direct</sub>
     </td>
   </tr>
 </table>
+
+<br/>
+
+> Step3: reward shaping
+
+<br/>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+    <td width="100%" align="center" style="border: none;">
+      <img src="show_results/shape-reward-4_grasp-on-finger-side_2026-06-10_20-05-58.gif" width="90%">
+      <br><sub>4_grasp-on-finger-side</sub>
+    </td>
+  </tr>
+</table>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="100%" align="center" style="border: none;">
+      <img src="show_results/shape-reward-3_grasp-on-palm_2026-06-10_13-01-04.gif" width="90%">
+      <br><sub>3_grasp-on-palm</sub>
+    </td>
+</table>
+
+<table style="width: 100%; border-collapse: collapse; border: none;">
+  <tr style="border: none;">
+    <td width="33%" align="center" style="border: none;">
+      <img src="show_results/shape-reward-1_baseline_2026-06-10_00-27-46.gif" width="100%">
+      <br><sub>1_baseline</sub>
+    </td>
+    <td width="33%" align="center" style="border: none;">
+      <img src="show_results/shape-reward-1_fix_2026-06-10_00-54-07.gif" width="100%">
+      <br><sub>1_fix</sub>
+    </td>    
+    <td width="33%" align="center" style="border: none;">
+      <img src="show_results/shape-reward-2_antipodal_2026-06-10_01-15-43.gif" width="100%">
+      <br><sub>2_antipodal</sub>
+    </td>
+  </tr>
+</table>
+
+<br/>
+
+> Step2: isaaclab env test
 
 <br/>
 
@@ -72,19 +128,18 @@ linkerhand_sdk-dev_zq/
 
 <br/>
 
+> Step1: isaacsim scene
+
+<br/>
+
 <table style="width: 100%; border-collapse: collapse; border: none;">
   <tr style="border: none;">
-    <td width="50%" align="center" style="border: none;">
-      <img src="show_results/control_direct.gif" width="100%">
-      <br><sub>control_direct</sub>
-    </td>
-    <td width="50%" align="center" style="border: none;">
-      <img src=".gif" width="100%">
-      <br><sub>TODO: control_RL</sub>
+    <td width="100%" align="center" style="border: none;">
+      <img src="show_results/test21_isaacsim_scene.png" width="60%">
+      <br><sub>test21 isaac sim：create scene & 获取环境参数</sub>
     </td>
   </tr>
 </table>
-
 
 ### 核心模块1：项目前期准备和测试
 
